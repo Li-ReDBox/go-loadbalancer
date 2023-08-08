@@ -1,4 +1,4 @@
-// go run pool.go load_balancer.g
+// go run pool.go load_balancer.go
 package loadbalancer
 
 import (
