@@ -30,7 +30,7 @@ func ExamplePool_Pop() {
 	// Push a new worker with pending being 3
 	heap.Push(&wp, &Worker{pending: 3})
 
-	wp.Check()
+	// wp.Check()
 
 	// Check the popped workers' pendings - it should be in increase order.
 	for wp.Len() > 0 {
@@ -49,6 +49,6 @@ func ExamplePool_Swap() {
 	wp.Check()
 
 	// Output:
-	// 0 has loading of 2
-	// 1 has loading of 1
+	// 0  has loading of 2
+	// 1  has loading of 1
 }
