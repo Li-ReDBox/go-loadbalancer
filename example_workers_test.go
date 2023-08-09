@@ -7,14 +7,14 @@ import (
 	"fmt"
 )
 
-type Worker struct {
-	pending int // count of pending tasks
-	index   int // index in the heap
-}
+// type Worker struct {
+// 	pending int // count of pending tasks
+// 	index   int // index in the heap
+// }
 
 // This example creates a WorkerPool with some items, adds and manipulates an item,
 // and then removes the items with less pending pops out first.
-func Example_WorkerPool_Pop() {
+func ExamplePool_Pop() {
 	pendings := []int{1, 30, 29, 15, 27}
 	wp := make(Pool, len(pendings))
 
@@ -42,7 +42,7 @@ func Example_WorkerPool_Pop() {
 	// 1 3 15 27 29 30
 }
 
-func Example_WorkerPool_Swap() {
+func ExamplePool_Swap() {
 	wp := Pool{&Worker{pending: 1, index: 0}, &Worker{pending: 2, index: 1}}
 	wp.Swap(0, 1)
 
