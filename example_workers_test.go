@@ -7,13 +7,8 @@ import (
 	"fmt"
 )
 
-// type Worker struct {
-// 	pending int // count of pending tasks
-// 	index   int // index in the heap
-// }
-
-// This example creates a WorkerPool with some items, adds and manipulates an item,
-// and then removes the items with less pending pops out first.
+// ExamplePool_Pop creates a Pool with some items, then add a new Worker.
+// At the last, pop all of them.
 func ExamplePool_Pop() {
 	pendings := []int{1, 30, 29, 15, 27}
 	wp := make(Pool, len(pendings))
@@ -27,12 +22,11 @@ func ExamplePool_Pop() {
 
 	heap.Init(&wp)
 
-	// Push a new worker with pending being 3
+	// Push a new worker with pending of 3
 	heap.Push(&wp, &Worker{pending: 3})
 
-	// wp.Check()
-
-	// Check the popped workers' pendings - it should be in increase order.
+	// After Push, the order is not fully established correctly. Why?
+	// Check the popped workers' pending - it should be in increase order.
 	for wp.Len() > 0 {
 		w := heap.Pop(&wp).(*Worker)
 		fmt.Printf("%d ", w.pending)
@@ -40,15 +34,4 @@ func ExamplePool_Pop() {
 
 	// Output:
 	// 1 3 15 27 29 30
-}
-
-func ExamplePool_Swap() {
-	wp := Pool{&Worker{pending: 1, index: 0}, &Worker{pending: 2, index: 1}}
-	wp.Swap(0, 1)
-
-	wp.Check()
-
-	// Output:
-	// 0  has loading of 2
-	// 1  has loading of 1
 }
