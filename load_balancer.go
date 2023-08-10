@@ -23,14 +23,14 @@ type Worker struct {
 
 func (w *Worker) work(done chan *Worker) {
 	for req := range w.request {
-		fmt.Println("Getting a request from pool for requests")
+		// fmt.Println("Getting a request from pool for requests")
 		// req := <-w.request // get a Request from the pool in balancer
-		fmt.Println("The worker with least load has been received. Run the request and pass on the result to request.")
+		// fmt.Println("The worker with least load has been received. Run the request and pass on the result to request.")
 		// send result to requester by the channel defined in Request
 		req.c <- req.fn() // call fn and send result
-		fmt.Println("Worker has sent result to Request's channel. Next, tell balancer it is done.")
+		// fmt.Println("Worker has sent result to Request's channel. Next, tell balancer it is done.")
 		done <- w // we've finished this request, notify the pool in balancer
-		fmt.Println("Balancer has been notified from a worker.")
+		// fmt.Println("Balancer has been notified from a worker.")
 	}
 }
 
@@ -51,17 +51,16 @@ func (b *Balancer) print() {
 // The balancer waits for new messages on the request and completion channels.
 func (b *Balancer) balance(req chan Request) {
 	var n atomic.Uint32
-	n.Add(1)
 	for {
 		select {
 		case req := <-req: // received a Request...
 			n.Add(1)
 			fmt.Println("Balancer received request. Start to dispatch ...")
 			b.dispatch(req) // ...so send it to a Worker
-		case w := <-b.done: // a worker has finished ...
-			fmt.Printf("Balancer received the signal of Done. Cleaning up ...\n\t job count: %d\n", n.Load())
-			b.completed(w) // ...so update its info
 			b.print()
+		case w := <-b.done: // a worker has finished ...
+			fmt.Printf("Balancer received the signal of Done.\n\t So far the completed job count: %d\n\n", n.Load())
+			b.completed(w) // ...so update its info
 		case <-time.After(10 * time.Second):
 			return
 		}
@@ -70,12 +69,8 @@ func (b *Balancer) balance(req chan Request) {
 
 // Send Request to worker
 func (b *Balancer) dispatch(req Request) {
-	fmt.Println()
-	fmt.Println("Getting a worker from the pool.")
-	// fmt.Println()
 	// Grab the least loaded worker...
 	w := heap.Pop(&b.pool).(*Worker)
-	fmt.Println("Current worker has loading of ", w.pending, " has been popped, dispatched")
 	// ...send it the task.
 	w.request <- req
 	// One more in its work queue.

@@ -2,34 +2,34 @@ package main
 
 import (
 	"container/heap"
-	"fmt"
 	"math/rand"
 	"time"
 )
 
 func workFn() int {
-	fmt.Println("I did something for the balancer.")
+	time.Sleep(time.Duration(rand.Intn(9000)) * time.Millisecond)
+	// fmt.Println("I did something for the balancer.")
 	return 1
 }
 
-func furtherProcess(c int) {
-	fmt.Println("Demonstrate a further work in a pipeline: printing:", c)
-}
+// func furtherProcess(c int) {
+// 	fmt.Println("Demonstrate a further work in a pipeline: printing:", c)
+// }
 
 // An artificial but illustrative simulation of a requester, a load generator.
 // work is a send-only channel, once set, Balancer can start to dispatch
 func requester(work chan<- Request) {
-	c := make(chan int) // create a channel for receiving result from workFn
+	c := make(chan int) // create a channel for receiving result for a particular requester
 	// each requester only allow to 10 requests
 	for i := 0; i < 10; i++ {
 		// Kill some time (fake load). Do not flat out.
-		time.Sleep(time.Duration(rand.Intn(1e4)) * time.Millisecond)
-		fmt.Println("Will create a new request, waiting for a worker ...")
+		// time.Sleep(time.Duration(rand.Intn(100)) * time.Millisecond)
 		work <- Request{workFn, c} // send request, blocks
-		result := <-c              // wait for answer until there is one
-		fmt.Println("Request has been processed, will send to furtherProcess()")
-		furtherProcess(result)
-		fmt.Println("furtherProcess has finished too. Full life cycle of a request is done.")
+		<-c
+		// result := <-c              // wait for answer until there is one
+		// fmt.Println("Request has been processed, will send to furtherProcess()")
+		// furtherProcess(result)
+		// fmt.Println("furtherProcess has finished too. Full life cycle of a request is done.")
 	}
 }
 
@@ -61,8 +61,8 @@ func main() {
 	}
 
 	// set all workers to share the same balancer channel
-	for i := 0; i < workers; i++ {
-		go wp[i].work(b.done)
+	for _, w := range wp {
+		go w.work(b.done)
 	}
 
 	// Balancer has only one request channel
