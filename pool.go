@@ -1,4 +1,5 @@
-package loadbalancer
+// package loadbalancer
+package main
 
 type Pool []*Worker
 

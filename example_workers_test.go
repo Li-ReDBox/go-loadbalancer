@@ -1,6 +1,7 @@
 // This example demonstrates a WorkerPool using the heap interface.
 // go test example_workers_test.go pool.go
-package loadbalancer
+// package loadbalancer
+package main
 
 import (
 	"container/heap"
