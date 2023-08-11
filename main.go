@@ -18,14 +18,14 @@ func workFn() int {
 
 // An artificial but illustrative simulation of a requester, a load generator.
 // work is a send-only channel, once set, Balancer can start to dispatch
-func requester(work chan<- Request) {
+func requester(work chan<- Request, nWorker int) {
 	c := make(chan int) // create a channel for receiving result for a particular requester
 	// each requester only allow to 10 requests
 	for i := 0; i < 10; i++ {
 		// Kill some time (fake load). Do not flat out.
-		// time.Sleep(time.Duration(rand.Intn(100)) * time.Millisecond)
+		time.Sleep(time.Duration(rand.Int63n(1e3 * int64(nWorker))))
 		work <- Request{workFn, c} // send request, blocks
-		<-c
+		<-c                        // the result of workFn only returns boring 1, so discard by just draining the channel
 		// result := <-c              // wait for answer until there is one
 		// fmt.Println("Request has been processed, will send to furtherProcess()")
 		// furtherProcess(result)
@@ -44,12 +44,13 @@ func main() {
 	// time.Sleep(1 * time.Second)
 	// End of the simple dome
 
+	nRequester := 8
 	workers := 3
 	wp := make(Pool, workers)
 
 	for i := 0; i < workers; i++ {
 		wp[i] = &Worker{
-			request: make(chan Request, 10), // this is a buffered channel
+			request: make(chan Request, nRequester), // this is a buffered channel
 		}
 	}
 
@@ -67,8 +68,8 @@ func main() {
 
 	// Balancer has only one request channel
 	r := make(chan Request)
-	for i := 0; i < 3; i++ {
-		go requester(r)
+	for i := 0; i < nRequester; i++ {
+		go requester(r, workers)
 	}
 
 	// set up channel, it has to be done through goroutine

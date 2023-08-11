@@ -5,7 +5,6 @@ package main
 import (
 	"container/heap"
 	"fmt"
-	"sync/atomic"
 	"time"
 )
 
@@ -50,18 +49,21 @@ func (b *Balancer) print() {
 // balance runs load balancing strategy and update the state of the worker pool.
 // The balancer waits for new messages on the request and completion channels.
 func (b *Balancer) balance(req chan Request) {
-	var n atomic.Uint32
+	var nN, nC int
 	for {
 		select {
 		case req := <-req: // received a Request...
-			n.Add(1)
+			nN++
 			fmt.Println("Balancer received request. Start to dispatch ...")
 			b.dispatch(req) // ...so send it to a Worker
 			b.print()
 		case w := <-b.done: // a worker has finished ...
-			fmt.Printf("Balancer received the signal of Done.\n\t So far the completed job count: %d\n\n", n.Load())
+			nC++
+			fmt.Printf("Balancer received the signal of Done.\n\t So far dispatched job count: %d, completed job count: %d\n\n", nN, nC)
 			b.completed(w) // ...so update its info
 		case <-time.After(10 * time.Second):
+			// if anything takes long then the timer's duration, balancer will not wait
+			fmt.Println("Maximal waiting time for possible dispatch/completion has elapsed. If the timer was correctly set up, all jobs should have completed.")
 			return
 		}
 	}
