@@ -1,9 +1,10 @@
 package main
 
 import (
-	"container/heap"
 	"math/rand"
 	"time"
+
+	"funmech.com/loadbalancer"
 )
 
 func workFn() int {
@@ -12,20 +13,16 @@ func workFn() int {
 	return 1
 }
 
-// func furtherProcess(c int) {
-// 	fmt.Println("Demonstrate a further work in a pipeline: printing:", c)
-// }
-
 // An artificial but illustrative simulation of a requester, a load generator.
 // work is a send-only channel, once set, Balancer can start to dispatch
-func requester(work chan<- Request, nWorker int) {
+func requester(work chan<- loadbalancer.Request, nWorker int) {
 	c := make(chan int) // create a channel for receiving result for a particular requester
 	// each requester only allow to 10 requests
 	for i := 0; i < 10; i++ {
 		// Kill some time (fake load). Do not flat out.
 		time.Sleep(time.Duration(rand.Int63n(1e3 * int64(nWorker))))
-		work <- Request{workFn, c} // send request, blocks
-		<-c                        // the result of workFn only returns boring 1, so discard by just draining the channel
+		work <- loadbalancer.Request{Fn: workFn, Result: c} // send request, blocks
+		<-c                                                 // the result of workFn only returns boring 1, so discard by just draining the channel
 		// result := <-c              // wait for answer until there is one
 		// fmt.Println("Request has been processed, will send to furtherProcess()")
 		// furtherProcess(result)
@@ -45,35 +42,30 @@ func main() {
 	// End of the simple dome
 
 	nRequester := 8
-	workers := 3
-	wp := make(Pool, workers)
+	nWorker := 3
+	wp := make(loadbalancer.Pool, nWorker)
 
-	for i := 0; i < workers; i++ {
-		wp[i] = &Worker{
-			request: make(chan Request, nRequester), // this is a buffered channel
-		}
+	for i := 0; i < nWorker; i++ {
+		w := loadbalancer.NewWorker(make(chan loadbalancer.Request, nRequester))
+		wp[i] = &w
 	}
 
-	heap.Init(&wp)
+	comp := make(chan *loadbalancer.Worker, nWorker)
 
-	b := Balancer{
-		wp,
-		make(chan *Worker, workers),
-	}
-
-	// set all workers to share the same balancer channel
+	// set all workers to share the same completion notification channel
 	for _, w := range wp {
-		go w.work(b.done)
+		go w.Work(comp)
 	}
 
-	// Balancer has only one request channel
-	r := make(chan Request)
+	// Make a request channel for requester to send requests
+	r := make(chan loadbalancer.Request)
 	for i := 0; i < nRequester; i++ {
-		go requester(r, workers)
+		go requester(r, nWorker)
 	}
 
-	// set up channel, it has to be done through goroutine
-	b.balance(r)
+	// Set the Balancer up
+	b := loadbalancer.Balancer{}
+	b.Balance(wp, r, comp)
 
 	// // Below creates requests non-stop, very quick resource runs out
 	// reaching to LLVM limit of 8128 live goroutines:
