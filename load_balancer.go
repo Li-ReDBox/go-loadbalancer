@@ -14,10 +14,9 @@ type Request struct {
 	Result chan int   // The channel to return the result.
 }
 
-// The load balancer needs a pool of workers and a single channel to which requesters can report task completion.
+// Balancer: a load balancer manages a pool of Workers and a single channel to which Workers can report its completion.
 type Balancer struct {
 	pool Pool
-	done chan *Worker
 }
 
 func (b *Balancer) print() {
@@ -33,7 +32,6 @@ func (b *Balancer) Balance(wp Pool, req chan Request, complete chan *Worker) {
 	heap.Init(&wp)
 
 	b.pool = wp
-	b.done = complete
 
 	var nN, nC int
 	for {
@@ -43,7 +41,7 @@ func (b *Balancer) Balance(wp Pool, req chan Request, complete chan *Worker) {
 			fmt.Println("Balancer received request. Start to dispatch ...")
 			b.dispatch(req) // ...so send it to a Worker
 			b.print()
-		case w := <-b.done: // a worker has finished ...
+		case w := <-complete: // a worker has finished ...
 			nC++
 			fmt.Printf("Balancer received the signal of Done.\n\t So far dispatched job count: %d, completed job count: %d\n\n", nN, nC)
 			b.completed(w) // ...so update its info
