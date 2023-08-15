@@ -7,17 +7,20 @@ import (
 	lb "funmech.com/loadbalancer"
 )
 
+var seed = 0
+
 func fn() int {
-	return 1
+	seed++
+	return seed
 }
 
-// A simple requester and worker communicate through a Request channel.
-// One worker, one requester
+// A simple requester and worker communicate through a single Request channel and a single response channel.
+// One worker, nRequest requester
 func main() {
 	nRequest := 10
 	r := make(chan lb.Request)
 
-	// The order is imported: before sending, channel has to be ready to receive
+	// The order is critical: before sending, channel has to be ready to receive
 	// go func(r chan lb.Request) {
 	// 	c := make(chan int)
 	// 	for i := 0; i < nRequest; i++ {
@@ -38,10 +41,16 @@ func main() {
 
 	c := make(chan int)
 	for i := 0; i < nRequest; i++ {
-		r <- lb.Request{Fn: fn, Result: c}
+		go func() {
+			r <- lb.Request{Fn: fn, Result: c}
+		}()
+	}
+
+	// Retrieve results of all requests sent
+	for i := 0; i < nRequest; i++ {
 		fmt.Println("Run", i, "has result of", <-c)
 	}
-	fmt.Println("Sleeping")
+
 	// close the channel to allow the goroutine and wait for it to exit, this is more important there are calls to external
 	close(r)
 	// wait a bit to allow the print to happen
