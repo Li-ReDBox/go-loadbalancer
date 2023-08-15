@@ -26,11 +26,10 @@ func (b *Balancer) print() {
 	fmt.Println()
 }
 
-// Balance runs load balancing strategy and update the state of the worker pool.
-// The balancer waits for new messages on the request and completion channels.
+// Balance runs load balancing strategy and update the state of the worker pool using heap.
+// The balancer waits for new messages on the request and completion channels and act accordingly.
 func (b *Balancer) Balance(wp Pool, req chan Request, complete chan *Worker) {
 	heap.Init(&wp)
-
 	b.pool = wp
 
 	var nN, nC int
