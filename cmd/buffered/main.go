@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"math/rand"
 	"sync"
 	"time"
@@ -25,17 +26,19 @@ func requester(work chan<- lb.Request, nWorker int) {
 }
 
 func main() {
-	nRequester := 5 // this is the maximal pending total: each requester will wait until last request has completed before a new request is sent
+	nRequester := 8 // this is the maximal pending total: each requester will wait until last request has completed before a new request is sent
 	nWorker := 3
 	wp := make(lb.Pool, nWorker)
 
-	// Request channel of each Worker is set to the number of requesters
+	// Request channel of each Worker is set to the number of requesters or wReqSize like below
+	wReqSize := 3 // roundUp(nRequester / nWorker) ==> 8 /3 = 3
 	for i := 0; i < nWorker; i++ {
-		w := lb.NewWorker(make(chan lb.Request, nRequester))
+		w := lb.NewWorker(make(chan lb.Request, wReqSize))
 		wp[i] = &w
 	}
 
-	comp := make(chan *lb.Worker, nWorker)
+	// comp := make(chan *lb.Worker, nWorker)
+	comp := make(chan *lb.Worker)
 	// set all workers with the same completion notification channel
 	for _, w := range wp {
 		go w.Work(comp)
@@ -49,6 +52,8 @@ func main() {
 	// Balance has a timeout of 10s clause to exit when its dispatch is not in deadlock!
 	go b.Balance(wp, r, comp)
 
+	start := time.Now()
+
 	// run a few goroutines to generate requests
 	var wg sync.WaitGroup
 	for i := 0; i < nRequester; i++ {
@@ -60,4 +65,6 @@ func main() {
 	}
 	// Wait for all requests have been completed
 	wg.Wait()
+
+	fmt.Printf("All done in %v\n", time.Since(start))
 }
