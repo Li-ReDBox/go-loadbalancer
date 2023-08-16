@@ -17,7 +17,7 @@ func workFn() int {
 func requester(work chan<- lb.Request, nWorker int) {
 	c := make(chan int) // create a channel for receiving result for a particular requester
 	// each requester only allow to 10 requests to save time
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 3; i++ {
 		// Kill some time (fake load). Do not flat out.
 		// time.Sleep(time.Duration(rand.Int63n(1e3 / int64(nWorker))))
 		work <- lb.Request{Fn: workFn, Result: c} // send request, blocks
@@ -35,12 +35,13 @@ func main() {
 	nWorker := 3
 	wp := make(lb.Pool, nWorker)
 
+	// when a non-buffered channel is used here, workers can hold up to 4 requests, then goes into deadlock
 	for i := 0; i < nWorker; i++ {
-		w := lb.NewWorker(make(chan lb.Request, 1))
+		w := lb.NewWorker(make(chan lb.Request))
 		wp[i] = &w
 	}
 
-	comp := make(chan *lb.Worker, nWorker)
+	comp := make(chan *lb.Worker, 1)
 	// set all workers with the same completion notification channel ready for receiving Requests
 	for _, w := range wp {
 		go w.Work(comp)
@@ -48,12 +49,14 @@ func main() {
 
 	// Make a request channel for requester to send requests and run a few goroutines to generate requests
 	r := make(chan lb.Request)
-	for i := 0; i < nRequester; i++ {
-		go requester(r, nWorker)
-	}
 
 	// Set the Balancer up by passing on request and notification channels
 	b := lb.Balancer{}
 	// Balance has a timeout of 10s clause to exit
-	b.Balance(wp, r, comp)
+	go b.Balance(wp, r, comp)
+
+	for i := 0; i < nRequester; i++ {
+		requester(r, nWorker)
+	}
+
 }
