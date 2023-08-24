@@ -35,11 +35,17 @@ func (b *Balancer) Balance(wp Pool, req chan Request, complete chan *Worker) {
 	var nN, nC int
 	for {
 		select {
-		case req := <-req: // received a Request...
-			nN++
-			fmt.Println("Balancer received request. Start to dispatch ...")
-			b.dispatch(req) // ...so send it to a Worker
-			b.print()
+		case req, ok := <-req: // received a Request...
+			if ok {
+				nN++
+				fmt.Println("Balancer received request. Start to dispatch ...")
+				b.dispatch(req) // ...so send it to a Worker
+				b.print()
+			} else {
+				fmt.Println("Shut workers done by closing their request channels")
+				b.shutdown()
+				return
+			}
 		case w := <-complete: // a worker has finished ...
 			nC++
 			fmt.Printf("Balancer received the signal of Done.\n\t So far dispatched job count: %d, completed job count: %d\n\n", nN, nC)
@@ -75,4 +81,11 @@ func (b *Balancer) completed(w *Worker) {
 	// fmt.Printf("Cleanup done, and push the worker %d back to the pool for new requests.\n\n", w.index)
 
 	// this may be replaced by update / heap.Fix
+}
+
+func (b *Balancer) shutdown() {
+	for b.pool.Len() > 0 {
+		w := heap.Pop(&b.pool).(*Worker)
+		close(w.request)
+	}
 }

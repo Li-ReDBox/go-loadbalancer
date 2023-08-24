@@ -6,10 +6,13 @@ import (
 	"os"
 	"runtime/pprof"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	lb "funmech.com/loadbalancer"
 )
+
+var count atomic.Int32
 
 func workFn() int {
 	time.Sleep(time.Duration(rand.Intn(9)) * time.Second)
@@ -25,6 +28,8 @@ func requester(work chan<- lb.Request, nWorker int) {
 		work <- lb.Request{Fn: workFn, Result: c} // send request, blocks
 		<-c                                       // the result of workFn only returns boring 1, so discard by just draining the channel
 	}
+	count.Add(1)
+	fmt.Println("Done generating requests")
 }
 
 func main() {
@@ -39,11 +44,17 @@ func main() {
 		wp[i] = &w
 	}
 
+	var wg sync.WaitGroup
+
 	// comp := make(chan *lb.Worker, nWorker)
 	comp := make(chan *lb.Worker)
 	// set all workers with the same completion notification channel
 	for _, w := range wp {
-		go w.Work(comp)
+		wg.Add(1)
+		go func(w *lb.Worker) {
+			defer wg.Done()
+			w.Work(comp)
+		}(w)
 	}
 
 	// Make a request channel for requester to send requests
@@ -57,15 +68,16 @@ func main() {
 	start := time.Now()
 
 	// run a few goroutines to generate requests
-	var wg sync.WaitGroup
 	for i := 0; i < nRequester; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			requester(r, nWorker)
-		}()
+		go requester(r, nWorker)
 	}
-	// Wait for all requests have been completed
+
+	// Have all requester completed in this demo?
+	for count.Load() < int32(nRequester) {
+	}
+	fmt.Println("Closing the request channel")
+	close(r)
+	// Wait for all workers have been shutdown
 	wg.Wait()
 
 	fmt.Printf("All done in %v\n", time.Since(start))
