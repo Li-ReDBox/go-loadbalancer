@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"math/rand"
+	"os"
+	"runtime/pprof"
 	"sync"
 	"time"
 
@@ -67,4 +69,5 @@ func main() {
 	wg.Wait()
 
 	fmt.Printf("All done in %v\n", time.Since(start))
+	pprof.Lookup("goroutine").WriteTo(os.Stdout, 2)
 }
