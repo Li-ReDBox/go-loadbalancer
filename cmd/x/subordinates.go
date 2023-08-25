@@ -3,8 +3,6 @@ package main
 import (
 	"fmt"
 	"math/rand"
-	"os"
-	"runtime/pprof"
 	"time"
 )
 
@@ -54,6 +52,7 @@ func controller() {
 	}()
 
 	fmt.Println("Lets hear them")
+	// Now saying and stopped fight to each other, but why?
 	for {
 		select {
 		case saying := <-chat:
@@ -75,5 +74,5 @@ func main() {
 
 	// if all reported, let's celebrate
 	fmt.Println("Every subordinate has reported, we are done")
-	pprof.Lookup("goroutine").WriteTo(os.Stdout, 2)
+	// pprof.Lookup("goroutine").WriteTo(os.Stdout, 2)
 }
