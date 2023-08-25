@@ -17,8 +17,8 @@ func subordinate(no int, chat chan string, signal chan string) {
 	for {
 		s++
 		select {
-		case <-signal:
-			fmt.Println("  subordinate", no+1, "has received signal")
+		case m := <-signal:
+			fmt.Println("  subordinate", no+1, "has received signal", m)
 			signal <- fmt.Sprintf("    ACK: subordinate %d has received signal", no+1)
 			return
 		default:
@@ -44,7 +44,7 @@ func controller() {
 		// take some to quit, controller wait patiently
 		<-time.After(5 * time.Second)
 		for i := 0; i < nSub; i++ {
-			stop <- "please quit"
+			stop <- fmt.Sprintf("Communication %d: please quit", i+1)
 			// now we can check if there is a response from a subordinate, but stop channel is synchronous channel, there is more a blocker
 			fmt.Println(<-stop)
 		}
@@ -60,6 +60,9 @@ func controller() {
 		case <-stopped:
 			fmt.Println("All have been stopped, time to go home")
 			return
+			// default:
+			// 	// this does not really help, just avoid deadlock in some cases. What is a robust solution?
+			// 	time.Sleep(900)
 		}
 	}
 }
