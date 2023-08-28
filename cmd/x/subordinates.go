@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"math/rand"
+	"strings"
 	"time"
 )
 
@@ -14,23 +15,27 @@ import (
 // signal channel is used by subordinate and controller to tell each other in a synchronous way.
 func subordinate(no int, chat chan string, signal chan string) {
 	s := 0
+	no++
 	for {
 		s++
 		select {
 		case m := <-signal:
-			fmt.Println("  subordinate", no+1, "has received signal", m)
-			signal <- fmt.Sprintf("    ACK: subordinate %d has received signal", no+1)
+			if strings.Contains(m, "ACK") {
+				panic("Stop channel has been written out of order:" + m)
+			}
+			fmt.Printf("  subordinate %d has received signal %q.\n", no, m)
+			signal <- fmt.Sprintf("    ACK: subordinate %d has received signal", no)
 			return
 		default:
 			time.Sleep(time.Duration(rand.Intn(9000)) * time.Microsecond)
-			fmt.Printf("Subordinate %d's count is %d\n", no+1, s)
-			chat <- fmt.Sprintf("%d's count is %d", no+1, s)
+			fmt.Printf("Subordinate %d's count is %d\n", no, s)
+			chat <- fmt.Sprintf("%d's count is %d", no, s)
 		}
 	}
 }
 
 func controller() {
-	nSub := 50
+	nSub := 150
 	chat := make(chan string, nSub)
 	stop := make(chan string) // not buffered, so stop channel is running in synchronous, easy to spot a deadlock
 	stopped := make(chan struct{})
@@ -44,9 +49,9 @@ func controller() {
 		// take some to quit, controller wait patiently
 		<-time.After(5 * time.Second)
 		for i := 0; i < nSub; i++ {
-			stop <- fmt.Sprintf("Communication %d: please quit", i+1)
+			stop <- fmt.Sprintf("commanding %d: please quit", i+1)
 			// now we can check if there is a response from a subordinate, but stop channel is synchronous channel, there is more a blocker
-			fmt.Println(<-stop)
+			fmt.Printf("Stopped %d with its message: %s\n", i+1, <-stop)
 		}
 		stopped <- struct{}{}
 	}()
