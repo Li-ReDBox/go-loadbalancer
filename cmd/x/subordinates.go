@@ -1,3 +1,6 @@
+//go:build ignore && OMIT
+// +build ignore,OMIT
+
 package main
 
 import (
@@ -70,6 +73,7 @@ func controller() {
 	}
 }
 
+// STARTMAIN OMIT
 func main() {
 	t := time.Now()
 	controller()
