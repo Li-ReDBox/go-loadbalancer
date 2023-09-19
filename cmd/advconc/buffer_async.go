@@ -26,7 +26,7 @@ func main() {
 		}
 		log.Println("Out channel is closed, so done with printing goroutine")
 	}()
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 300; i++ {
 		log.Println("Sending", i)
 		in <- i
 	}
@@ -50,32 +50,35 @@ func buffer(in <-chan int, out chan<- int) {
 		var i int
 		// freshly define a channel variable but not initialised, so by default it blocks.
 		var c chan<- int
-		// var baton <-chan int
 		// reestablish communication only when there are things to communicate
 		if len(buf) > 0 {
 			i = buf[0]
 			c = out // enable send case
 		}
-		// if we want only bounded buffer, how to temporarily block receive from in channel?
-		// select either to receive or send. Uses a baton channel?
-		// if len(buf) < 3 {
-		// 	baton = in // enable receive
-		// }
-		select {
-		case n, ok := <-in:
-			// case n, ok := <-baton:
-			// checks if the sending channel has been closed
-			if ok {
-				log.Println("Pushing into buffer")
-				buf = append(buf, n)
-			} else {
-				log.Println("Receiving channels has been closed, prepare for exiting buffer goroutine")
-				in = nil // disable receive case
+		// use empty default when there is one case in a select statement
+		if len(buf) < 7 { // lower than the buffer size, try to read and append
+			select {
+			case n, ok := <-in:
+				if ok {
+					log.Println("Pushing into buffer")
+					buf = append(buf, n)
+				} else {
+					log.Println("Receiving channels has been closed, prepare for exiting buffer goroutine")
+					in = nil // disable receive case
+				}
+			default:
 			}
+		} else {
+			log.Println("Pause for increasing buffer, currently", len(buf))
+		}
+		// as long as buf is not empty, read
+		select {
 		case c <- i:
 			log.Println("Popping out from buffer")
 			buf = buf[1:]
+		default:
 		}
+
 	}
 	close(out)
 	log.Println("Exiting buffer func")
