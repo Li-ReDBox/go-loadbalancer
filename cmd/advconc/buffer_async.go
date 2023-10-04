@@ -61,7 +61,7 @@ func bufferedChannel(cl int) {
 func softwareChannel(cl int) {
 	// create a software channel with a size, like a buffered channel, with two local channels
 	in, out := make(chan int), make(chan int)
-	go buffer(in, out, cl)
+	go boundedBuffer(in, out, cl)
 	done := make(chan struct{})
 	go func() {
 		c := 0
@@ -82,11 +82,10 @@ func softwareChannel(cl int) {
 	<-done
 }
 
-// A buffered channel does not block until it is full or empty. built-in functions len and cap can be used to them.
-// Question: what are the differences between this buffer and a normal buffered channel when the buffer is full?
-// Both block send, allow receive operation to continue. Looks like if there is a size restriction, buffered channel
+// A bounded(Buffer) channel does not block until it is full. built-in functions len and cap can be used to them.
+// So far I have not found any significant differences in terms performance. But if there is a size restriction, buffered channel
 // is easier - no custom code.
-func buffer(in <-chan int, out chan<- int, size int) {
+func boundedBuffer(in <-chan int, out chan<- int, size int) {
 	var buf []int
 
 	for in != nil || len(buf) > 0 {
@@ -125,5 +124,5 @@ func buffer(in <-chan int, out chan<- int, size int) {
 
 	}
 	close(out)
-	log.Println("Exiting buffer func")
+	log.Println(" buffer func")
 }
