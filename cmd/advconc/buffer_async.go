@@ -17,11 +17,13 @@ const (
 	loops = 30000
 )
 
-// buffered_channel seems run faster than software_channel when size is very low
-// with size = 1, loops = 30000, it is 107.049125ms vs 122.057958ms
-// with size = 200, loops = 30000, it is 123.412333ms vs 122.693ms
-// with size = 1000, loops = 30000, it is 124.32175ms vs 123.773625ms
-// with size = 2000, loops = 30000, it is 119.814791ms, 124.367125ms vs 124.6685ms,122.250709ms
+// buffered_channel seems run faster than software_channel when size is very low in some benchmark runs,
+// not all. But in other cases, does not see significant difference. In general they probably statistically equal.
+// with size = 1, loops = 30000, it is 9 123ms/op vs 9 135ms/op
+// with size = 2, loops = 30000, it is 9 130s/op vs 9 123ms/op
+// with size = 200, loops = 30000, it is 9 123ms/op vs  9 122ms/op
+// with size = 1000, loops = 30000, it is 9 122ms/op vs 9 124ms/op
+// with size = 2000, loops = 30000, it is 9 123ms/op vs 9 124ms/op
 func main() {
 	log.Println("Buffered channel")
 	t := time.Now()
@@ -109,9 +111,10 @@ func buffer(in <-chan int, out chan<- int, size int) {
 				}
 			default:
 			}
-		} else {
-			// log.Printf("Pause for increasing buffer, size = %d, currently len = %d\n", size, len(buf))
 		}
+		// else {
+		// 	// log.Printf("Pause for increasing buffer, size = %d, currently len = %d\n", size, len(buf))
+		// }
 		// as long as buf is not empty, read
 		select {
 		case c <- i:
